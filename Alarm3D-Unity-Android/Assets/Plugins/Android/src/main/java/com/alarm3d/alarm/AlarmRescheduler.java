@@ -7,6 +7,9 @@ import android.os.Build;
 
 public final class AlarmReceiver extends BroadcastReceiver
 {
+    private static final String EXTRA_ALARM_ID =
+            "alarm_id";
+
     @Override
     public void onReceive(
             Context context,
@@ -17,25 +20,31 @@ public final class AlarmReceiver extends BroadcastReceiver
             return;
         }
 
+        String alarmId = "";
+
+        if (intent != null)
+        {
+            String receivedId =
+                    intent.getStringExtra(
+                            EXTRA_ALARM_ID);
+
+            if (receivedId != null)
+            {
+                alarmId = receivedId;
+            }
+        }
+
         Intent serviceIntent =
                 new Intent(
                         context,
                         AlarmForegroundService.class);
 
-        if (intent != null)
-        {
-            String alarmId =
-                    intent.getStringExtra("alarm_id");
+        serviceIntent.putExtra(
+                EXTRA_ALARM_ID,
+                alarmId);
 
-            if (alarmId != null)
-            {
-                serviceIntent.putExtra(
-                        "alarm_id",
-                        alarmId);
-            }
-        }
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+        if (Build.VERSION.SDK_INT >=
+                Build.VERSION_CODES.O)
         {
             context.startForegroundService(
                     serviceIntent);
