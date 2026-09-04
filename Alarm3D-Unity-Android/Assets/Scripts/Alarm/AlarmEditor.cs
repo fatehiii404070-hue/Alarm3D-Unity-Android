@@ -1,4 +1,3 @@
-using System;
 using UnityEngine;
 
 namespace Alarm3D.Alarm
@@ -6,97 +5,94 @@ namespace Alarm3D.Alarm
     [DisallowMultipleComponent]
     public sealed class AlarmEditor : MonoBehaviour
     {
-        public bool CreateAlarm(
-            string title,
-            int hour,
-            int minute,
-            bool enabled,
-            string soundId,
-            out string alarmId)
+        [SerializeField]
+        private AlarmManager alarmManager;
+
+        private void Awake()
         {
-            alarmId = string.Empty;
-
-            title = AlarmValidator.NormalizeTitle(title);
-
-            if (!AlarmValidator.IsValidTime(hour, minute))
-                return false;
-
-            AlarmData alarm = new AlarmData
+            if (alarmManager == null)
             {
-                id = Guid.NewGuid().ToString("N"),
-                title = title,
-                hour = hour,
-                minute = minute,
-                enabled = enabled,
-                soundId = soundId ?? string.Empty
-            };
-
-            if (!AlarmValidator.IsValid(alarm))
-                return false;
-
-            if (AlarmManager.Instance == null)
-                return false;
-
-            AlarmManager.Instance.AddAlarm(alarm);
-
-            alarmId = alarm.id;
-            return true;
+                alarmManager =
+                    FindFirstObjectByType<AlarmManager>();
+            }
         }
 
         public bool UpdateAlarm(
-            string alarmId,
+            string id,
             string title,
             int hour,
             int minute,
             bool enabled,
             string soundId)
         {
-            if (string.IsNullOrWhiteSpace(alarmId))
+            if (alarmManager == null)
+            {
+                Debug.LogError(
+                    "AlarmEditor: AlarmManager not found.");
+
+                return false;
+            }
+
+            if (string.IsNullOrWhiteSpace(id))
                 return false;
 
-            if (!AlarmValidator.IsValidTime(hour, minute))
+            AlarmData existingAlarm =
+                alarmManager.GetAlarm(id);
+
+            if (existingAlarm == null)
                 return false;
 
-            if (AlarmManager.Instance == null)
-                return false;
+            var updatedAlarm = new AlarmData
+            {
+                id = existingAlarm.id,
+                title = title ?? string.Empty,
+                hour = Mathf.Clamp(hour, 0, 23),
+                minute = Mathf.Clamp(minute, 0, 59),
+                enabled = enabled,
+                soundId = soundId ?? string.Empty
+            };
 
-            AlarmData alarm = FindAlarm(alarmId);
+            return alarmManager.UpdateAlarm(updatedAlarm);
+        }
+
+        public bool SetEnabled(
+            string id,
+            bool enabled)
+        {
+            if (alarmManager == null)
+            {
+                Debug.LogError(
+                    "AlarmEditor: AlarmManager not found.");
+
+                return false;
+            }
+
+            return alarmManager.SetAlarmEnabled(
+                id,
+                enabled);
+        }
+
+        public bool SetSound(
+            string id,
+            string soundId)
+        {
+            if (alarmManager == null)
+            {
+                Debug.LogError(
+                    "AlarmEditor: AlarmManager not found.");
+
+                return false;
+            }
+
+            AlarmData alarm =
+                alarmManager.GetAlarm(id);
 
             if (alarm == null)
                 return false;
 
-            alarm.title =
-                AlarmValidator.NormalizeTitle(title);
-
-            alarm.hour = hour;
-            alarm.minute = minute;
-            alarm.enabled = enabled;
             alarm.soundId = soundId ?? string.Empty;
 
-            return AlarmValidator.IsValid(alarm);
-        }
-
-        public bool DeleteAlarm(string alarmId)
-        {
-            if (string.IsNullOrWhiteSpace(alarmId))
-                return false;
-
-            if (AlarmManager.Instance == null)
-                return false;
-
-            AlarmManager.Instance.RemoveAlarm(alarmId);
-            return true;
-        }
-
-        private AlarmData FindAlarm(string alarmId)
-        {
-            foreach (AlarmData alarm in AlarmManager.Instance.Alarms)
-            {
-                if (alarm != null && alarm.id == alarmId)
-                    return alarm;
-            }
-
-            return null;
+            return alarmManager.UpdateAlarm(alarm);
         }
     }
 }
