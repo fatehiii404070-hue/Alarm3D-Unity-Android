@@ -13,8 +13,14 @@ import android.os.IBinder;
 
 public final class AlarmForegroundService extends Service
 {
-    private static final String CHANNEL_ID = "alarm3d_alarm";
-    private static final int NOTIFICATION_ID = 3001;
+    private static final String CHANNEL_ID =
+            "alarm3d_alarm";
+
+    private static final int NOTIFICATION_ID =
+            3001;
+
+    private static final String ACTION_STOP =
+            "com.alarm3d.alarm.STOP_ALARM";
 
     private MediaPlayer mediaPlayer;
 
@@ -24,6 +30,25 @@ public final class AlarmForegroundService extends Service
             int flags,
             int startId)
     {
+        if (intent != null &&
+            ACTION_STOP.equals(intent.getAction()))
+        {
+            stopAlarmSound();
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N)
+            {
+                stopForeground(STOP_FOREGROUND_REMOVE);
+            }
+            else
+            {
+                stopForeground(true);
+            }
+
+            stopSelf(startId);
+
+            return START_NOT_STICKY;
+        }
+
         createNotificationChannel();
 
         Notification notification =
@@ -34,7 +59,8 @@ public final class AlarmForegroundService extends Service
                         .setContentText(
                                 "زمان هشدار فرا رسیده است.")
                         .setSmallIcon(
-                                android.R.drawable.ic_lock_idle_alarm)
+                                android.R.drawable
+                                        .ic_lock_idle_alarm)
                         .setOngoing(true)
                         .setCategory(
                                 Notification.CATEGORY_ALARM)
@@ -56,7 +82,8 @@ public final class AlarmForegroundService extends Service
         try
         {
             Uri soundUri =
-                    android.provider.Settings.System.DEFAULT_ALARM_ALERT_URI;
+                    android.provider.Settings.System
+                            .DEFAULT_ALARM_ALERT_URI;
 
             mediaPlayer =
                     new MediaPlayer();
@@ -66,7 +93,8 @@ public final class AlarmForegroundService extends Service
                             .setUsage(
                                     AudioAttributes.USAGE_ALARM)
                             .setContentType(
-                                    AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                                    AudioAttributes
+                                            .CONTENT_TYPE_SONIFICATION)
                             .build());
 
             mediaPlayer.setDataSource(
@@ -111,7 +139,8 @@ public final class AlarmForegroundService extends Service
 
     private void createNotificationChannel()
     {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O)
+        if (Build.VERSION.SDK_INT <
+                Build.VERSION_CODES.O)
         {
             return;
         }
@@ -120,7 +149,8 @@ public final class AlarmForegroundService extends Service
                 new NotificationChannel(
                         CHANNEL_ID,
                         "Alarm3D Alarms",
-                        NotificationManager.IMPORTANCE_HIGH);
+                        NotificationManager
+                                .IMPORTANCE_HIGH);
 
         channel.setDescription(
                 "Notifications used for scheduled alarms.");
@@ -134,6 +164,7 @@ public final class AlarmForegroundService extends Service
                         .build());
 
         channel.enableVibration(true);
+
         channel.setLockscreenVisibility(
                 Notification.VISIBILITY_PUBLIC);
 
@@ -143,7 +174,8 @@ public final class AlarmForegroundService extends Service
 
         if (manager != null)
         {
-            manager.createNotificationChannel(channel);
+            manager.createNotificationChannel(
+                    channel);
         }
     }
 
