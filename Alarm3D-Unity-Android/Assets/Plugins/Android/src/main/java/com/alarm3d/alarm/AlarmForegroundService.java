@@ -24,7 +24,8 @@ public final class AlarmForegroundService extends Service
 
     private MediaPlayer mediaPlayer;
 
-    private String activeAlarmId = "";
+    private String activeAlarmId =
+            "";
 
     @Override
     public int onStartCommand(
@@ -32,17 +33,10 @@ public final class AlarmForegroundService extends Service
             int flags,
             int startId)
     {
-        if (intent != null)
-        {
-            String alarmId =
-                    intent.getStringExtra(
-                            EXTRA_ALARM_ID);
+        readAlarmId(intent);
 
-            if (alarmId != null)
-            {
-                activeAlarmId = alarmId;
-            }
-        }
+        AlarmUnityBridge.sendAlarmToUnity(
+                activeAlarmId);
 
         createNotificationChannel();
 
@@ -71,6 +65,27 @@ public final class AlarmForegroundService extends Service
         return START_NOT_STICKY;
     }
 
+
+    private void readAlarmId(
+            Intent intent)
+    {
+        if (intent == null)
+        {
+            return;
+        }
+
+        String alarmId =
+                intent.getStringExtra(
+                        EXTRA_ALARM_ID);
+
+        if (alarmId != null)
+        {
+            activeAlarmId =
+                    alarmId;
+        }
+    }
+
+
     private void startAlarmSound()
     {
         stopAlarmSound();
@@ -88,6 +103,9 @@ public final class AlarmForegroundService extends Service
                     new AudioAttributes.Builder()
                             .setUsage(
                                     AudioAttributes.USAGE_ALARM)
+                            .setContentType(
+                                    AudioAttributes
+                                            .CONTENT_TYPE_SONIFICATION)
                             .build());
 
             mediaPlayer.setDataSource(
@@ -107,6 +125,7 @@ public final class AlarmForegroundService extends Service
         }
     }
 
+
     private void stopAlarmSound()
     {
         if (mediaPlayer == null)
@@ -114,9 +133,21 @@ public final class AlarmForegroundService extends Service
             return;
         }
 
+        try
+        {
+            if (mediaPlayer.isPlaying())
+            {
+                mediaPlayer.stop();
+            }
+        }
+        catch (Exception ignored)
+        {
+        }
+
         mediaPlayer.release();
         mediaPlayer = null;
     }
+
 
     private void createNotificationChannel()
     {
@@ -130,7 +161,8 @@ public final class AlarmForegroundService extends Service
                 new NotificationChannel(
                         CHANNEL_ID,
                         "Alarm3D Alarm",
-                        NotificationManager.IMPORTANCE_HIGH);
+                        NotificationManager
+                                .IMPORTANCE_HIGH);
 
         channel.setSound(
                 android.provider.Settings.System
@@ -151,10 +183,12 @@ public final class AlarmForegroundService extends Service
         }
     }
 
+
     public String getActiveAlarmId()
     {
         return activeAlarmId;
     }
+
 
     @Override
     public void onDestroy()
@@ -163,6 +197,7 @@ public final class AlarmForegroundService extends Service
 
         super.onDestroy();
     }
+
 
     @Override
     public IBinder onBind(
