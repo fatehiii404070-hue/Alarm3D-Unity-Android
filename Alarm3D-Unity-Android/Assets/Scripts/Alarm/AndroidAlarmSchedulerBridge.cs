@@ -11,28 +11,66 @@ namespace Alarm3D.Alarm
             "com.alarm3d.alarm.AlarmSchedulerBridge";
 #endif
 
-        public void Schedule(string alarmId, DateTime fireTime)
+        public bool CanScheduleExactAlarms()
         {
-            if (string.IsNullOrWhiteSpace(alarmId))
-                return;
-
-            if (fireTime <= DateTime.Now)
-                return;
-
 #if UNITY_ANDROID && !UNITY_EDITOR
             using (var unityPlayer =
                    new AndroidJavaClass("com.unity3d.player.UnityPlayer"))
             using (var activity =
-                   unityPlayer.GetStatic<AndroidJavaObject>("currentActivity"))
+                   unityPlayer.GetStatic<AndroidJavaObject>(
+                       "currentActivity"))
+            using (var alarmManager =
+                   activity.Call<AndroidJavaObject>(
+                       "getSystemService",
+                       "alarm"))
+            {
+                if (alarmManager == null)
+                    return false;
+
+                return alarmManager.Call<bool>(
+                    "canScheduleExactAlarms");
+            }
+#else
+            return true;
+#endif
+        }
+
+        public bool Schedule(
+            string alarmId,
+            DateTime fireTime)
+        {
+            if (string.IsNullOrWhiteSpace(alarmId))
+                return false;
+
+            if (fireTime <= DateTime.Now)
+                return false;
+
+#if UNITY_ANDROID && !UNITY_EDITOR
+            if (!CanScheduleExactAlarms())
+            {
+                Debug.LogWarning(
+                    "Exact alarm permission is not granted.");
+
+                return false;
+            }
+
+            using (var unityPlayer =
+                   new AndroidJavaClass("com.unity3d.player.UnityPlayer"))
+            using (var activity =
+                   unityPlayer.GetStatic<AndroidJavaObject>(
+                       "currentActivity"))
             using (var bridge =
                    new AndroidJavaClass(BridgeClass))
             {
-                bridge.CallStatic(
+                return bridge.CallStatic<bool>(
                     "schedule",
                     activity,
                     alarmId,
-                    new DateTimeOffset(fireTime).ToUnixTimeMilliseconds());
+                    new DateTimeOffset(fireTime)
+                        .ToUnixTimeMilliseconds());
             }
+#else
+            return true;
 #endif
         }
 
@@ -45,7 +83,8 @@ namespace Alarm3D.Alarm
             using (var unityPlayer =
                    new AndroidJavaClass("com.unity3d.player.UnityPlayer"))
             using (var activity =
-                   unityPlayer.GetStatic<AndroidJavaObject>("currentActivity"))
+                   unityPlayer.GetStatic<AndroidJavaObject>(
+                       "currentActivity"))
             using (var bridge =
                    new AndroidJavaClass(BridgeClass))
             {
