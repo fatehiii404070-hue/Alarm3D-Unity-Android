@@ -1,59 +1,65 @@
-using System;
 using UnityEngine;
 
 namespace Alarm3D.Alarm
 {
-    public class AlarmScheduler : MonoBehaviour
+    [DisallowMultipleComponent]
+    public sealed class AlarmScheduler : MonoBehaviour
     {
-        public static AlarmScheduler Instance { get; private set; }
+        [SerializeField]
+        private AlarmSchedulingService schedulingService;
 
         private void Awake()
         {
-            if (Instance != null && Instance != this)
+            if (schedulingService == null)
             {
-                Destroy(gameObject);
+                schedulingService =
+                    FindFirstObjectByType<AlarmSchedulingService>();
+            }
+        }
+
+        public void ScheduleAlarm(AlarmData alarm)
+        {
+            if (alarm == null)
+                return;
+
+            if (schedulingService == null)
+            {
+                Debug.LogError(
+                    "AlarmScheduler: AlarmSchedulingService not found.");
+
                 return;
             }
 
-            Instance = this;
-            DontDestroyOnLoad(gameObject);
+            schedulingService.ScheduleAlarm(alarm);
         }
 
-        private void Update()
+        public void CancelAlarm(string alarmId)
         {
-            CheckAlarms();
-        }
-
-        private void CheckAlarms()
-        {
-            if (AlarmManager.Instance == null)
+            if (string.IsNullOrWhiteSpace(alarmId))
                 return;
 
-            DateTime now = DateTime.Now;
-
-            foreach (AlarmData alarm in AlarmManager.Instance.Alarms)
+            if (schedulingService == null)
             {
-                if (alarm == null || !alarm.enabled)
-                    continue;
+                Debug.LogError(
+                    "AlarmScheduler: AlarmSchedulingService not found.");
 
-                if (alarm.hour == now.Hour &&
-                    alarm.minute == now.Minute &&
-                    now.Second == 0)
-                {
-                    TriggerAlarm(alarm);
-                }
+                return;
             }
+
+            schedulingService.CancelAlarm(alarmId);
         }
 
-        private void TriggerAlarm(AlarmData alarm)
+        public void RescheduleAll()
         {
-            Debug.Log($"Alarm triggered: {alarm.title}");
-
-            if (AudioManager.Instance != null &&
-                !string.IsNullOrWhiteSpace(alarm.soundId))
+            if (schedulingService == null)
             {
-                AudioManager.Instance.Play(alarm.soundId);
+                Debug.LogError(
+                    "AlarmScheduler: AlarmSchedulingService not found.");
+
+                return;
             }
+
+            schedulingService.RescheduleAll();
         }
     }
 }
