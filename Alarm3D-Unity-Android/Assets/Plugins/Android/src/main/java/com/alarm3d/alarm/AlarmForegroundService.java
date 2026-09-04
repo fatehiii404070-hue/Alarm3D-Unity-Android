@@ -19,10 +19,12 @@ public final class AlarmForegroundService extends Service
     private static final int NOTIFICATION_ID =
             3001;
 
-    private static final String ACTION_STOP =
-            "com.alarm3d.alarm.STOP_ALARM";
+    private static final String EXTRA_ALARM_ID =
+            "alarm_id";
 
     private MediaPlayer mediaPlayer;
+
+    private String activeAlarmId = "";
 
     @Override
     public int onStartCommand(
@@ -30,23 +32,16 @@ public final class AlarmForegroundService extends Service
             int flags,
             int startId)
     {
-        if (intent != null &&
-            ACTION_STOP.equals(intent.getAction()))
+        if (intent != null)
         {
-            stopAlarmSound();
+            String alarmId =
+                    intent.getStringExtra(
+                            EXTRA_ALARM_ID);
 
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N)
+            if (alarmId != null)
             {
-                stopForeground(STOP_FOREGROUND_REMOVE);
+                activeAlarmId = alarmId;
             }
-            else
-            {
-                stopForeground(true);
-            }
-
-            stopSelf(startId);
-
-            return START_NOT_STICKY;
         }
 
         createNotificationChannel();
@@ -55,9 +50,10 @@ public final class AlarmForegroundService extends Service
                 new Notification.Builder(
                         this,
                         CHANNEL_ID)
-                        .setContentTitle("هشدار")
+                        .setContentTitle(
+                                "Alarm3D")
                         .setContentText(
-                                "زمان هشدار فرا رسیده است.")
+                                "Alarm is ringing")
                         .setSmallIcon(
                                 android.R.drawable
                                         .ic_lock_idle_alarm)
@@ -92,9 +88,6 @@ public final class AlarmForegroundService extends Service
                     new AudioAttributes.Builder()
                             .setUsage(
                                     AudioAttributes.USAGE_ALARM)
-                            .setContentType(
-                                    AudioAttributes
-                                            .CONTENT_TYPE_SONIFICATION)
                             .build());
 
             mediaPlayer.setDataSource(
@@ -111,7 +104,6 @@ public final class AlarmForegroundService extends Service
         catch (Exception exception)
         {
             exception.printStackTrace();
-            stopAlarmSound();
         }
     }
 
@@ -120,17 +112,6 @@ public final class AlarmForegroundService extends Service
         if (mediaPlayer == null)
         {
             return;
-        }
-
-        try
-        {
-            if (mediaPlayer.isPlaying())
-            {
-                mediaPlayer.stop();
-            }
-        }
-        catch (IllegalStateException ignored)
-        {
         }
 
         mediaPlayer.release();
@@ -148,12 +129,8 @@ public final class AlarmForegroundService extends Service
         NotificationChannel channel =
                 new NotificationChannel(
                         CHANNEL_ID,
-                        "Alarm3D Alarms",
-                        NotificationManager
-                                .IMPORTANCE_HIGH);
-
-        channel.setDescription(
-                "Notifications used for scheduled alarms.");
+                        "Alarm3D Alarm",
+                        NotificationManager.IMPORTANCE_HIGH);
 
         channel.setSound(
                 android.provider.Settings.System
@@ -162,11 +139,6 @@ public final class AlarmForegroundService extends Service
                         .setUsage(
                                 AudioAttributes.USAGE_ALARM)
                         .build());
-
-        channel.enableVibration(true);
-
-        channel.setLockscreenVisibility(
-                Notification.VISIBILITY_PUBLIC);
 
         NotificationManager manager =
                 getSystemService(
@@ -179,25 +151,22 @@ public final class AlarmForegroundService extends Service
         }
     }
 
+    public String getActiveAlarmId()
+    {
+        return activeAlarmId;
+    }
+
     @Override
     public void onDestroy()
     {
         stopAlarmSound();
 
-        NotificationManager manager =
-                getSystemService(
-                        NotificationManager.class);
-
-        if (manager != null)
-        {
-            manager.cancel(NOTIFICATION_ID);
-        }
-
         super.onDestroy();
     }
 
     @Override
-    public IBinder onBind(Intent intent)
+    public IBinder onBind(
+            Intent intent)
     {
         return null;
     }
